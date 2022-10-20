@@ -1,8 +1,8 @@
 
-<img src="images/opencvlogo.png" width=""  height="130" alt="opencvLogo" style="margin-right:20px;border-radius:35px"  align="left"/><img src="images/numpylogo.png" width="132"  height="" alt="h3abionet" style="margin-right:20px;border-radius:35px"  align="right"/>
+<img src="images/opencvlogo.png" width=""  height="130" alt="opencvLogo" style="margin-right:20px;border-radius:35px"  align="left"/><img src="images/numpylogo.png" width="132"  height="" alt="numpylogo" style="margin-right:20px;border-radius:35px"  align="right"/>
 <div>
 <h2>Computer Vison</h2>
-<img src="images/searchmap_.png" width="132"  height="" alt="h3abionet" style="margin-right:20px"  align="right"/>
+<img src="images/searchmap_.png" width="132"  height="" alt="searchmaplogo" style="margin-right:20px"  align="right"/>
 <div>
 <p></p><br>
 
