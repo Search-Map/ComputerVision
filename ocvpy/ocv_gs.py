@@ -17,16 +17,27 @@ __author__   :str  = "Umar <github/jukoo"
 
 import cv2 as cv , sys, argparse 
 
-def main () : 
-    
-    stdarg  = argparse.ArgumentParser(description ="Simple Open CV programme  to Get started ")  
-    stdarg.add_argument("-f" , "--file" ,  help="load file media")
-    stdarg.add_argument("-w" ,"--window-name" , help="Personalize your Window name")  
-    stdarg.add_argument("-s"  ,"--save" , help="Named your Saved file media") 
-    stdarg.add_argument("-v" , "--version" , action="store_true" ,  help="print Version")
-    #TODO :  you can add more command  ...  
-    
-    argv  = stdarg.parse_args() 
+
+def argument_handler (_defcall_)  : 
+    def bundler  (  *args,  **kwargs):
+        stdarg  = argparse.ArgumentParser(description ="Simple Open CV programme  to Get started ") 
+        stdarg.add_argument("-f" , "--file" ,  help="load file media")
+        stdarg.add_argument("-w" ,"--window-name" , help="Personalize your Window name")  
+        stdarg.add_argument("-s"  ,"--save" , help="Named your Saved file media") 
+        stdarg.add_argument("-v" , "--version" , action="store_true" ,  help="print Version")  
+        #TODO :  you can add more command  ...  
+        argv_handler = stdarg.parse_args()
+        args = [args] 
+        args.__iadd__([argv_handler])  
+        args.__delitem__(0)  
+        _defcall_(*args  ,  **kwargs)
+
+    return  bundler ;  
+
+
+@argument_handler     
+def main (*argv ,**kwargs) :
+    argv  = argv.__getitem__(0) 
 
     if  argv.version :
         sys.__stdout__.write(f"{__version__}\n")  
