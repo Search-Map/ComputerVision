@@ -1,4 +1,0 @@
-1 -> create  virtual env           [ python3 -m venv  [envname] ] 
-2 -> activate the virtual env      [ source  envname/bin/activate ]
-3 -> install the required modules  [ python3  -m pip  install -r requirement.txt ]  
-4 -> have fun  !!                  
