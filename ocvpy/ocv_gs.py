@@ -40,7 +40,10 @@ class  VideoMediaProcess :
     """ 
     
     CV_PROPERTIES :str =  "^CAP_PROP_*.+" 
-
+    FPS  :int   = 30
+    SIZE :tuple =  (800,800)
+    CC_FRAME_COMPRESSOR  =   {  "MJPG" :  ".avi" , "XVID" :".mp4" }   
+    
     def __init__ (self , video_file_or_device :any )  :
         try   : 
             self.vmediafilename  = int ( video_file_or_device)  
@@ -61,14 +64,16 @@ class  VideoMediaProcess :
     def _vsize (self)  : return  self.CAP_PROP_FRAME_HEIGHT , self.CAP_PROP_FRAME_WIDTH 
     
     @property  
-    def inspect_cv2_cap_proterties (self): 
+    @classmethod 
+    def inspect_cv2_cap_proterties (cls): 
         vcap_properties =  [ cap for  cap in getmembers(cv) if re.match(rf"^{self.CV_PROPERTIES}" , cap.__getitem__(0)) is not None  ]
         return vcap_properties 
 
     @inspect_cv2_cap_proterties.setter  
-    def inspect_cv2_cap_proterties(self ,new_patern )  :
-        self.CV_PROPERTIES = new_patern
-        return self.inspect_cv2_cap_proterties  
+    @classmethod 
+    def inspect_cv2_cap_proterties(cls ,new_patern )  :
+        cls.CV_PROPERTIES = new_patern
+        return cls.inspect_cv2_cap_proterties  
 
     def  __enter__ ( self ) : 
         self.vmediametadata = cv.VideoCapture(self.vmediafilename) 
@@ -82,8 +87,16 @@ class  VideoMediaProcess :
         cv.destroyAllWindows()  
 
 
-    def initiate_stream_record ( self  ,  destination )  :   
-        return  cv.VideoWriter(destination , cv.VideoWriter_fourcc(*'MJPG'),30,(1080,1920)) 
+    def initiate_stream_record ( self,  destination  , frame_size=(1080,1920) ,  framecc=self.CC_FRAME_COMPRESSOR.keys()[0] )  :  
+        assert self.CC_FRAME_COMPRESSOR.keys().__contains__(framecc)  
+        destination  = f'{destination}{self.CC_FRAME_COMPRESSOR[framecc]}' 
+        return  cv.VideoWriter(destination , cv.VideoWriter_fourcc(*framecc),self.FPS ,  frame_size) 
+
+    @property 
+    def  use_bgsubalgorithm (self, algorithm="MOG2")  :  
+        cv_method_string  =  f"createBackgroundSubtractor{algorithm}" 
+        return  getattr(cv , cv_method_string)() 
+
          
     def __str__ (self) :  
         return f"file name {self.vmediafilename}" 
@@ -93,6 +106,8 @@ __FLAGS__ =  {
         "file"        : "-f ,load file media",
         "window-name" : "-w ,window name",
         "save"        : "-s ,Named your saved file media",
+        "inspect-attr": "-I ,Inspect Attributes" , 
+        "bg-algo"     : "-b ,set Background Algorithm ( KNN | MOG2)",
         "version_"    : "-v ,print verion"
 }
 
@@ -108,9 +123,14 @@ def main (*argv ,**kwargs)  ->  int :
     assert argv.file  is not  None  ,  f"require  File  media to proceed\n"
     
     #set  default  window name3  if not specified  ... 
-    default_window_name  =  ( "SM OCV::Display" ,  argv.window_name)[argv.window_name is not None]  
+    default_window_name  =  ( "SM OCV::Display" ,  argv.window_name)[argv.window_name is not None] 
+
+    if  args.inspect_attr  : 
+        print ( VideoMediaProcess.inspect_cv2_cap_proterties) 
+        sys.exit(1) 
+        
     
-    #! TODO :  SWITCH  VIDEO  OR IMAGE Depending  file extension  ...  
+    #!SWITCH  VIDEO  OR IMAGE Depending  file intput   ...  
     media_file   =  ( ( AutoSwitchMode.VIDEO_MODE.value ,  VideoMediaProcess(argv.file or 0 )), ( AutoSwitchMode.PICTURE_MODE.value ,  argv.file))[ cv.imread(argv.file) is not None] 
 
     fmod = namedtuple("fmod" , [ "mode" ,  "fd"])
@@ -118,23 +138,25 @@ def main (*argv ,**kwargs)  ->  int :
     
     if  fmod.mode.__eq__(AutoSwitchMode.VIDEO_MODE.value)  : 
 
-        writablestream = cv.VideoWriter("test.avi" , cv.VideoWriter_fourcc(*'MJPG'),30,(1080,1920))
+        if  args.save  is not None :  
+            writablestream = fmod.fd.initiate_stream_record(args.save)  
+        
         with fmod.fd as vmprocess  : 
             _ :bool =  vmprocess.isOpened()
             fps =  vmprocess.get(fmod.fd.CAP_PROP_FPS) 
-            #writablestream  = vmp.initiate_stream_record("test.avi")  
-            subt = cv.createBackgroundSubtractorKNN() 
+            subt = cv.createBackgroundSubtractorMOG2() 
             while  _  : 
                 _ , video_frame =  vmprocess.read() 
                 cf = cv.resize(video_frame  ,(800,800) )
                 mask  = subt.apply(cf) 
-                c , O = cv.findContours(mask, cv.RETR_LIST,cv.CHAIN_APPROX_SIMPLE) 
-                cv.imshow("Video Frame" , mask ) 
-                cv.displayOverlay('Video Frame', "dsadasdsa") 
-                writablestream.write(video_frame)  
+                c , O = cv.findContours(mask, cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE) 
+                cv.imshow(default_window_name , mask ) 
+                cv.displayOverlay(default_window_name,  default_window_name) 
                 keystroke  = cv.waitKey(20)
                 if  keystroke.__eq__(ord('q')) : break  
-
+                if  writablestream and  keystroke.__eq__(ord('s')) : 
+                    writablestream.write(video_frame)  
+                
             writablestream.release() 
     else : 
         imgfile =  cv.imread(cv.samples.findFile(fmod.fd)) 
