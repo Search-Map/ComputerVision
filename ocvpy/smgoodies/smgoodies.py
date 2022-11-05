@@ -17,21 +17,23 @@ __author__   :str  = "Umar <github/jukoo"
 
 from  typing  import  Dict , List , Tuple ,  TypeVar  
 
-
 #! Sugar  syntaxic  annotation  
 pym_  = TypeVar("pymodule")
-smg_  = TypeVar("smgmodule")  
+smg_  = TypeVar("smgmodule")
+func  = TypeVar("function" )
 
-os  : pym_ = __import__("os") 
-sys : pym_ = __import__("sys")
-argp: pym_ = __import__("argparse") 
+os      : pym_ = __import__("os") 
+sys     : pym_ = __import__("sys")
+argp    : pym_ = __import__("argparse") 
+inspect : pym_ = __import__("inspect")
+re      : pym_ = __import__("re") 
 
 
 def  SmGoodies ( goodies  )  : ... 
 
 
 @classmethod 
-def argparse ( goodies , flags_dictionary , sep =",") : 
+def argparse ( goodies , flags_dictionary , sep =",")  -> func: 
     
     def argument_handler(_defcall_)  : 
         stdarg  = argp.ArgumentParser(description ="Simple Open CV programme  to Get started ") 
@@ -59,11 +61,16 @@ def argparse ( goodies , flags_dictionary , sep =",") :
 
 
 
+@classmethod
+def module_inspection  ( goodies , module_target :any   ,  search_property : str )  -> any : 
+    properties_collections    =  [ props for  props in inspect.getmembers(module_target) if re.match(rf"{search_property}", props.__getitem__(0)) is not None ] 
+    return properties_collections  
 
 
 _smgoodies_map_ :  Dict[str , any]   = {
         "__init__" : SmGoodies , 
-        "argctrl" :argparse
+        "argctrl" :argparse,
+        "module_inspection": module_inspection 
         } 
 
 

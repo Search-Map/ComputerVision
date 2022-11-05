@@ -13,9 +13,9 @@ CC0 1.0 Universal
     HEREUNDER.
 """
 __version__  :str  = "@Search-Map opencv getting started v1.0" 
-__author__   :str  = "Umar <github/jukoo" 
+__author__   :str  = "Umar <github/jukoo>" 
 
-import cv2 as cv , sys , os , re   
+import cv2 as cv , sys , os  
 from inspect  import getmembers  
 from  enum import Enum  , unique 
 from  collections import namedtuple 
@@ -39,9 +39,9 @@ class  VideoMediaProcess :
     *this class  can be use as context manager... as protected scope  like "with open" 
     """ 
     
-    CV_PROPERTIES :str =  "^CAP_PROP_*.+" 
+    CV_PROPERTIES :str =  "^CAP_PROP_*.+"   
     FPS  :int   = 30
-    SIZE :tuple =  (800,800)
+    SIZE :tuple =  (600,600)
     CC_FRAME_COMPRESSOR  =   {  "MJPG" :  ".avi" , "XVID" :".mp4" }   
     
     def __init__ (self , video_file_or_device :any )  :
@@ -50,30 +50,18 @@ class  VideoMediaProcess :
         except ValueError  : 
              self.vmediafilename =  video_file_or_device  
 
-        self.vmediametadata  = None 
-        for  (cv_props  , rate)  in  self.inspect_cv2_cap_proterties :
-            self.__setattr__(cv_props, rate )  
+        self.vmediametadata  = None
+         
+        for  (cv_props_attr  , cv_props_value )   in  Goodies.module_inspection(cv , self.CV_PROPERTIES)  :
+            self.__setattr__(cv_props_attr  , cv_props_value)   
 
-    @property 
-    def _vframe (self) : return  self.vmediametadata.get(self.CAP_PROP_FPS)
-    @property
-    def _vheight(self) : return  self.vmediametadata.get(self.CAP_PROP_FRAME_HEIGHT)
-    @property
-    def _vwidth(self)  : return  self.vmediametadata.get(self.CAP_PROP_FRAME_WIDTH) 
+    def _vframe (self , Vcap_instance) : return  Vcap_instance.get(self.CAP_PROP_FPS)
+    def _vheight(self , Vcap_instance) : return  Vcap_instance.get(self.CAP_PROP_FRAME_HEIGHT)
+    def _vwidth (self , Vcap_instance) : return  Vcap_instance.get(self.CAP_PROP_FRAME_WIDTH) 
+    
     @property 
     def _vsize (self)  : return  self.CAP_PROP_FRAME_HEIGHT , self.CAP_PROP_FRAME_WIDTH 
     
-    @property  
-    @classmethod 
-    def inspect_cv2_cap_proterties (cls): 
-        vcap_properties =  [ cap for  cap in getmembers(cv) if re.match(rf"^{self.CV_PROPERTIES}" , cap.__getitem__(0)) is not None  ]
-        return vcap_properties 
-
-    @inspect_cv2_cap_proterties.setter  
-    @classmethod 
-    def inspect_cv2_cap_proterties(cls ,new_patern )  :
-        cls.CV_PROPERTIES = new_patern
-        return cls.inspect_cv2_cap_proterties  
 
     def  __enter__ ( self ) : 
         self.vmediametadata = cv.VideoCapture(self.vmediafilename) 
@@ -87,13 +75,15 @@ class  VideoMediaProcess :
         cv.destroyAllWindows()  
 
 
-    def initiate_stream_record ( self,  destination  , frame_size=(1080,1920) ,  framecc=self.CC_FRAME_COMPRESSOR.keys()[0] )  :  
-        assert self.CC_FRAME_COMPRESSOR.keys().__contains__(framecc)  
+    def initiate_stream_record ( self,  destination  , frame_size=(1080,1920) ,  framecc=None )  :  
+        framecc = list ( self.CC_FRAME_COMPRESSOR.keys()).__getitem__(0)  if  framecc is None  else  framecc.upper() 
+        assert list(self.CC_FRAME_COMPRESSOR.keys()).__contains__(framecc)  , f"undefined Attribute  only -> {list(self.CC_FRAME_COMPRESSOR.keys())} are allowed !" 
         destination  = f'{destination}{self.CC_FRAME_COMPRESSOR[framecc]}' 
         return  cv.VideoWriter(destination , cv.VideoWriter_fourcc(*framecc),self.FPS ,  frame_size) 
 
-    @property 
-    def  use_bgsubalgorithm (self, algorithm="MOG2")  :  
+    def  use_bgsubalgorithm (self, algorithm)  :
+        algorithm =  algorithm.upper() if algorithm is not None  else  "MOG2" 
+        assert  [ "MOG2" , "KNN"].__contains__(algorithm) ,"undefined backgroundsubtraction algorithm " 
         cv_method_string  =  f"createBackgroundSubtractor{algorithm}" 
         return  getattr(cv , cv_method_string)() 
 
@@ -103,12 +93,14 @@ class  VideoMediaProcess :
 
 
 __FLAGS__ =  {
-        "file"        : "-f ,load file media",
-        "window-name" : "-w ,window name",
-        "save"        : "-s ,Named your saved file media",
-        "inspect-attr": "-I ,Inspect Attributes" , 
-        "bg-algo"     : "-b ,set Background Algorithm ( KNN | MOG2)",
-        "version_"    : "-v ,print verion"
+        "file"         : "-f ,load file media",
+        "window-name"  : "-w ,window name",
+        "save"         : "-s ,Named your saved file media",
+        "size-resolution": "-r ,define size  resolution  e.g  800x800 ",
+        "inspect-attr_": "-I ,Inspect Attributes" ,
+        "set-fcompress": "-F ,set  format compressor "  ,  
+        "bg-algo"      : "-b ,set Background Algorithm ( KNN | MOG2)",
+        "version_"     : "-v ,print verion"
 }
 
 @Goodies.argctrl(__FLAGS__) 
@@ -118,46 +110,57 @@ def main (*argv ,**kwargs)  ->  int :
     if  argv.version :
         sys.__stdout__.write(f"{__version__}\n")  
         sys.exit(0) 
-    
+
+    if  argv.inspect_attr  : 
+        print (*Goodies.module_inspection(cv , VideoMediaProcess.CV_PROPERTIES) , sep='\n')  
+        sys.exit(0) 
+        
     #! Require file as input  ... !!! Raise Brutal Assertion !!!  
     assert argv.file  is not  None  ,  f"require  File  media to proceed\n"
     
-    #set  default  window name3  if not specified  ... 
+    #set  default  window name  if not specified  ... 
     default_window_name  =  ( "SM OCV::Display" ,  argv.window_name)[argv.window_name is not None] 
 
-    if  args.inspect_attr  : 
-        print ( VideoMediaProcess.inspect_cv2_cap_proterties) 
-        sys.exit(1) 
-        
-    
-    #!SWITCH  VIDEO  OR IMAGE Depending  file intput   ...  
+    #! Dynamic switch mode  (video or image ) 
     media_file   =  ( ( AutoSwitchMode.VIDEO_MODE.value ,  VideoMediaProcess(argv.file or 0 )), ( AutoSwitchMode.PICTURE_MODE.value ,  argv.file))[ cv.imread(argv.file) is not None] 
 
     fmod = namedtuple("fmod" , [ "mode" ,  "fd"])
     fmod = fmod(*list(media_file))  
-    
+     
     if  fmod.mode.__eq__(AutoSwitchMode.VIDEO_MODE.value)  : 
-
-        if  args.save  is not None :  
-            writablestream = fmod.fd.initiate_stream_record(args.save)  
+        writablestream  = None 
+        if  argv.save  is not None :  
+            writablestream = fmod.fd.initiate_stream_record(argv.save ,framecc =argv.set_fcompress)  
         
+        #  configure first  
+        subt = fmod.fd.use_bgsubalgorithm(argv.bg_algo)  if argv.bg_algo  is not None  else None 
+        size = fmod.fd.SIZE  
+        if argv.size_resolution : 
+            size_dimension =  argv.size_resolution.split("x") 
+            if size_dimension.__len__().__ge__(2):  
+                size  =  tuple ([ int(dim)  for dim in   size_dimension ]) 
+
         with fmod.fd as vmprocess  : 
             _ :bool =  vmprocess.isOpened()
-            fps =  vmprocess.get(fmod.fd.CAP_PROP_FPS) 
-            subt = cv.createBackgroundSubtractorMOG2() 
             while  _  : 
                 _ , video_frame =  vmprocess.read() 
-                cf = cv.resize(video_frame  ,(800,800) )
-                mask  = subt.apply(cf) 
-                c , O = cv.findContours(mask, cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE) 
-                cv.imshow(default_window_name , mask ) 
-                cv.displayOverlay(default_window_name,  default_window_name) 
-                keystroke  = cv.waitKey(20)
+                fps  =  fmod.fd._vframe(vmprocess) 
+                resized_vframe = cv.resize(video_frame  ,size[:2] )
+                if subt : 
+                    mask_filter   = subt.apply(resized_vframe) 
+                    cv.findContours(mask_filter, cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE) 
+        
+
+                cv.imshow(default_window_name , mask_filter if subt  else video_frame ) 
+                cv.displayOverlay(default_window_name, f"{default_window_name}\nfps:{fps}" ) 
+                keystroke  = cv.waitKey(20) 
+
                 if  keystroke.__eq__(ord('q')) : break  
                 if  writablestream and  keystroke.__eq__(ord('s')) : 
                     writablestream.write(video_frame)  
-                
-            writablestream.release() 
+           
+            if writablestream  : 
+                writablestream.release() 
     else : 
         imgfile =  cv.imread(cv.samples.findFile(fmod.fd)) 
         cv.namedWindow(default_window_name)     
