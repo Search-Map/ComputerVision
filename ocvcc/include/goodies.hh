@@ -18,7 +18,7 @@
 
 #define   FLAGS  "vsf:hr:"  //!  
 #define  VERSION   std::cout << "Search-Map  OpenCV v0.1" <<std::endl ;  
-#define  WIN_DEFAULT_NAME  "Search Map Viewer" 
+#define  WIN_DEFAULT_NAME  "Search Map Viewer <press 'q' to Exit" 
 #define  USAGE_DETAIL std::cout <<  
 
 #define  HELP(__programme_basename) std::cout  <<  "USAGE: " <<\

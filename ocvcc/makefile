@@ -24,7 +24,7 @@ shared_libs=-lopencv_core \
     -lopencv_cvv \
     -lopencv_features2d 
 
-cxxflags=-Wall -Wextra -pedantic  -std=c++17 
+cxxflags=-Wall -Wextra -pedantic  -std=c++17 -I include  
 src=$(wildcard  *.cc) 
 obj=$(src:.cc=.o)  
 
