@@ -49,7 +49,7 @@ cv::Mat  Imgrw::read(std::string const & imgfilename){
 } 
 
 void Imgrw::show(const std::string  & windowMainFrame_name , 
-        int wait_delay   , char k ) const {  
+        int wait_delay   , char key_stroke ) const {  
     
     if (imgMatrixMetadata.data  == NULL) 
         throw std::runtime_error("Matrix NULL") ;  
@@ -60,11 +60,8 @@ void Imgrw::show(const std::string  & windowMainFrame_name ,
     cv::createTrackbar("Trackbar" , windowMainFrame_name ,nullptr,4 ); 
     cv::imshow(windowMainFrame_name ,  imgMatrixMetadata); 
     
-    char   key = -1 ; 
-    while (  key  !=  k ) 
-    {
-        key = cv::waitKey(wait_delay)  ; 
-    }
+    
+    while (  (cv::waitKey(0) & 0xff ) != key_stroke) ;  
     cv::destroyAllWindows() ; 
     
 } 

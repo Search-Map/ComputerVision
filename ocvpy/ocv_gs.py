@@ -25,9 +25,12 @@ from  smgoodies import Goodies
 @unique 
 class AutoSwitchMode (Enum) :  
     VIDEO_MODE   :int  = 0 
-    PICTURE_MODE :int  = 1    
+    PICTURE_MODE :int  = 1 
+    
 
+converge_asmode  = lambda  x: dict (zip( x._member_names_ ,x._value2member_map_))  
 
+# Basic  Exception 
 class  VideoMediaProcessError(Exception) : 
     def __init__(self, mesg ,*args , **kwargs) : 
         Exception.__init__(self, mesg ,args ,**kwargs)
@@ -53,7 +56,12 @@ class  VideoMediaProcess :
         self.vmediametadata  = None
          
         for  (cv_props_attr  , cv_props_value )   in  Goodies.module_inspection(cv , self.CV_PROPERTIES)  :
-            self.__setattr__(cv_props_attr  , cv_props_value)   
+            self.__setattr__(cv_props_attr  , cv_props_value) 
+
+        for mode_attribute , value in converge_asmode(AutoSwitchMode).items(): 
+            self.__setattr__( mode_attribute ,  value) 
+
+
 
     def _vframe (self , Vcap_instance) : return  Vcap_instance.get(self.CAP_PROP_FPS)
     def _vheight(self , Vcap_instance) : return  Vcap_instance.get(self.CAP_PROP_FRAME_HEIGHT)
@@ -96,6 +104,7 @@ __FLAGS__ =  {
         "file"         : "-f ,load file media",
         "window-name"  : "-w ,window name",
         "save"         : "-s ,Named your saved file media",
+        "Save_"        : "-S ,save the current file in cwd  without  specifing name",
         "size-resolution": "-r ,define size  resolution  e.g  800x800 ",
         "inspect-attr_": "-I ,Inspect Attributes" ,
         "set-fcompress": "-F ,set  format compressor "  ,  
@@ -121,12 +130,16 @@ def main (*argv ,**kwargs)  ->  int :
     #set  default  window name  if not specified  ... 
     default_window_name  =  ( "SM OCV::Display" ,  argv.window_name)[argv.window_name is not None] 
 
-    #! Dynamic switch mode  (video or image ) 
-    media_file   =  ( ( AutoSwitchMode.VIDEO_MODE.value ,  VideoMediaProcess(argv.file or 0 )), ( AutoSwitchMode.PICTURE_MODE.value ,  argv.file))[ cv.imread(argv.file) is not None] 
+    #! Dynamic switch mode  (video or image )
+    mediastreaming =  (AutoSwitchMode.VIDEO_MODE.value , VideoMediaProcess(argv.file or 0 ))  
+    mediastatic    =  (AutoSwitchMode.PICTURE_MODE.value ,  argv.file)
+    media_file   =   (mediastreaming , mediastatic) [ cv.imread(argv.file) is not None] 
 
     fmod = namedtuple("fmod" , [ "mode" ,  "fd"])
     fmod = fmod(*list(media_file))  
-     
+    
+    #depending  what you give as input it Dynamicly choose the right mode for you 
+
     if  fmod.mode.__eq__(AutoSwitchMode.VIDEO_MODE.value)  : 
         writablestream  = None 
         if  argv.save  is not None :  
@@ -164,19 +177,30 @@ def main (*argv ,**kwargs)  ->  int :
     else : 
         imgfile =  cv.imread(cv.samples.findFile(fmod.fd)) 
         cv.namedWindow(default_window_name)     
-        cv.imshow(default_window_name ,  imgfile)  
-        keystroke =  0 
+        cv.imshow(default_window_name ,  imgfile) 
+        write_once = 0  # only used if argv.Save is defined 
     
         # 'q' for quit  
-        while  keystroke != ord('q'):
-            keystroke = cv.waitKey(0) 
-
-            # 's' for save
-            if argv.save is not None and  keystroke == ord('s') :
+        while True : 
+            keystroke_event_listener =   cv.waitKey(0) &0xff 
+            if keystroke_event_listener.__eq__(ord('q')) :
+                 cv.destroyAllWindows()  
+                 break 
+            # 's' for save  
+            if argv.save is not None and  keystroke_event_listener == ord('s') :
+                sys.__sdtout__.write(f"saved !\n") 
                 cv.imwrite(argv.save ,imgfile) 
+
+            if argv.Save and write_once.__eq__(0):
+                sys.__stdout__.write(f"auto saved !\n") 
+                file_on_cwd = argv.file.split("/").__getitem__(-1) 
+                cv.imwrite(file_on_cwd ,imgfile)
+                # just avoid overwrite 
+                write_once = 1 
+                
 
     return  0   
 
 
 if __name__.__eq__("__main__")  : 
-    main.__call__()  
+     main.__call__()  
